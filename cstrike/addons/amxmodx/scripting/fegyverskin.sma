@@ -1,0 +1,370 @@
+#include <amxmodx>
+#include <amxmisc>
+#include <engine>
+#include <nvault>
+#include <cstrike>
+#include <fun>
+#include <fakemeta>
+#include <hamsandwich>
+ 
+#define MAX_WEAPONS 12
+#define MAX_SKINS 3
+ 
+new g_Coins[33]
+new g_ActiveSkin[33][MAX_WEAPONS]
+new g_UnlockedSkins[33][MAX_WEAPONS]
+new g_MenuTarget[33]
+ 
+new vault, KISGRAV, SEBZES, ALAPGRAV
+new skin_oles, skin_hsoles, skin_kesoles
+ 
+new const g_WeaponNames[MAX_WEAPONS][] = {
+    "Deagle", "MP5Navy", "AutoShotgun", "Shotgun", "Famas", "Galil",
+    "AUG", "Scout", "AWP", "M249", "M4A1", "AK47"
+}
+ 
+new const g_WeaponPrefix[MAX_WEAPONS][] = {
+    "deagle", "mp5", "xm1014", "m3", "famas", "galil",
+    "aug", "scout", "awp", "m249", "m4a1", "ak47"
+}
+ 
+new const g_WeaponCSW[MAX_WEAPONS] = {
+    CSW_DEAGLE, CSW_MP5NAVY, CSW_XM1014, CSW_M3, CSW_FAMAS, CSW_GALIL,
+    CSW_AUG, CSW_SCOUT, CSW_AWP, CSW_M249, CSW_M4A1, CSW_AK47
+}
+ 
+new const g_WeaponEntNames[MAX_WEAPONS][] = {
+    "weapon_deagle", "weapon_mp5navy", "weapon_xm1014", "weapon_m3",
+    "weapon_famas", "weapon_galil", "weapon_aug", "weapon_scout",
+    "weapon_awp", "weapon_m249", "weapon_m4a1", "weapon_ak47"
+}
+ 
+// A kategoriak nevei
+new const g_SkinNames[MAX_SKINS][] = {
+    "Bronz Skin", "Ezust Skin", "Arany Skin (Kepesseggel)"
+}
+
+// A hozzajuk tartozo modell fajl vegzodesek (_1, _3, _5)
+new const g_SkinSuffix[MAX_SKINS] = {
+    1, 3, 5
+}
+ 
+// A kategoriak arai olespontban
+new const g_SkinCosts[MAX_SKINS] = {
+    200, 800, 2500
+}
+ 
+public plugin_precache() {
+    new path[128]
+    for(new w = 0; w < MAX_WEAPONS; w++) {
+        for(new s = 1; s <= MAX_SKINS; s++) {
+            formatex(path, charsmax(path), "models/fegyver_skin/v_%s_%d.mdl", g_WeaponPrefix[w], g_SkinSuffix[s-1])
+            if(file_exists(path)) {
+                precache_model(path)
+            }
+        }
+    }
+}
+ 
+public plugin_init() {
+    register_plugin("Fegyver Skinek V3", "3.0", "Fix")
+    set_task(25.0, "KorUzenet", 0, _, _, "b")
+   
+    register_event("CurWeapon", "Event_CurWeapon", "be", "1=1")
+    register_event("Damage", "event_sebzes", "be")
+    register_event("DeathMsg", "halal", "a")
+   
+    for(new i = 0; i < MAX_WEAPONS; i++) {
+        RegisterHam(Ham_Item_Deploy, g_WeaponEntNames[i], "Fwd_ItemDeploy_Post", 1)
+    }
+   
+    register_clcmd("say /skinmenu", "menu_main")
+    register_clcmd("say /skin", "menu_main")
+    register_clcmd("say /oles", "pontmegtekint")
+    
+    register_concmd("amx_givepoints", "cmd_givepoints", ADMIN_BAN, "<nev> <pont mennyiseg>")
+   
+    register_cvar("sima_oles", "2")
+    register_cvar("hs_oles", "2")
+    register_cvar("kes_oles", "1")
+   
+    skin_oles = get_cvar_num("sima_oles")
+    skin_hsoles = get_cvar_num("hs_oles")
+    skin_kesoles = get_cvar_num("kes_oles")
+    KISGRAV = register_cvar("skin_kisgravity", "470")
+    SEBZES = register_cvar("skin_sebzes", "2")
+    ALAPGRAV = get_cvar_pointer("sv_gravity")
+   
+    vault = nvault_open("fegyver_skinek_bolt")
+}
+
+public cmd_givepoints(id, level, cid) {
+    if(!cmd_access(id, level, cid, 3)) return PLUGIN_HANDLED;
+    
+    new arg1[32], arg2[10];
+    read_argv(1, arg1, charsmax(arg1));
+    read_argv(2, arg2, charsmax(arg2));
+    
+    new target = cmd_target(id, arg1, CMDTARGET_ALLOW_SELF);
+    if(!target) return PLUGIN_HANDLED;
+    
+    new points = str_to_num(arg2); 
+    g_Coins[target] += points;
+    
+    new target_name[32], admin_name[32];
+    get_user_name(target, target_name, 31);
+    
+    if(id == 0) {
+        formatex(admin_name, 31, "SERVER");
+    } else {
+        get_user_name(id, admin_name, 31);
+    }
+    
+    client_print(0, print_chat, "[Fegyver Skin] %s adott %d olespontot %s reszere!", admin_name, points, target_name);
+    mentes(target);
+    
+    return PLUGIN_HANDLED;
+}
+ 
+public Fwd_ItemDeploy_Post(ent) {
+    if(pev_valid(ent)) {
+        new id = get_pdata_cbase(ent, 41, 4)
+        if(is_user_alive(id)) {
+            new weapon_id = get_pdata_int(ent, 43, 4)
+            new w = get_weapon_index(weapon_id)
+            if(w != -1 && g_ActiveSkin[id][w] > 0) {
+                new path[128]
+                new s_index = g_ActiveSkin[id][w] - 1
+                formatex(path, charsmax(path), "models/fegyver_skin/v_%s_%d.mdl", g_WeaponPrefix[w], g_SkinSuffix[s_index])
+                if(file_exists(path)) {
+                    set_pev(id, pev_viewmodel2, path)
+                }
+            }
+        }
+    }
+}
+ 
+public Event_CurWeapon(id) {
+    if(!is_user_alive(id)) return;
+    new fegyver = read_data(2)
+    
+    set_user_footsteps(id, 0)
+    set_user_gravity(id, get_pcvar_float(ALAPGRAV) / 800.0)
+    set_user_rendering(id, kRenderFxNone, 0, 0, 0, kRenderNormal, 255)
+   
+    new w = get_weapon_index(fegyver)
+    // Ha a 3. skint (Arany Skin) hasznalja, aktivalodnak a kepessegek
+    if(w != -1 && g_ActiveSkin[id][w] == 3) {
+        if(fegyver == CSW_AWP) set_user_footsteps(id, 1)
+        if(fegyver == CSW_M249) set_user_gravity(id, get_pcvar_float(KISGRAV) / 800.0)
+        if(fegyver == CSW_M4A1) set_user_rendering(id, kRenderFxGlowShell, 0, 0, 0, kRenderTransColor, 80)
+    }
+}
+ 
+public halal(id) {
+    new gyilkos = read_data(1)
+    new aldozat = read_data(2)  
+    if(gyilkos == aldozat || !is_user_connected(gyilkos) || !is_user_connected(aldozat)) return PLUGIN_HANDLED;
+   
+    new olesekert = skin_oles
+    if(read_data(3)) olesekert += skin_hsoles
+   
+    static Fegyver[26]
+    read_data(4, Fegyver, sizeof(Fegyver) - 1)
+    if(equal(Fegyver, "knife")) olesekert += skin_kesoles
+   
+    g_Coins[gyilkos] += olesekert
+    client_print(gyilkos, print_chat, "[Fegyver Skin] Kaptal +%i olespontot. Egyenleged: %i", olesekert, g_Coins[gyilkos])
+    return PLUGIN_HANDLED
+}
+ 
+public menu_main(id) {
+    new cim[128]
+    formatex(cim, charsmax(cim), "\wFegyver Skinek \y(Kategoriak)^n\yOlespontod: \w%d", g_Coins[id])
+    new menu = menu_create(cim, "handler_main")
+   
+    for(new i = 0; i < MAX_WEAPONS; i++) {
+        new szNum[3]
+        num_to_str(i, szNum, 2)
+        menu_additem(menu, g_WeaponNames[i], szNum)
+    }
+    menu_setprop(menu, MPROP_EXIT, MEXIT_ALL)
+    menu_display(id, menu, 0)
+}
+ 
+public handler_main(id, menu, item) {
+    if(item == MENU_EXIT) {
+        menu_destroy(menu)
+        return PLUGIN_HANDLED
+    }
+    new info[4], dummy
+    menu_item_getinfo(menu, item, dummy, info, charsmax(info), _, _, dummy)
+    show_skin_menu(id, str_to_num(info))
+    menu_destroy(menu)
+    return PLUGIN_HANDLED
+}
+ 
+public show_skin_menu(id, weapon_id) {
+    g_MenuTarget[id] = weapon_id
+    new szTitle[128]
+    formatex(szTitle, charsmax(szTitle), "\w%s Skinek^n\yOlespontod: \w%d", g_WeaponNames[weapon_id], g_Coins[id])
+    new menu = menu_create(szTitle, "handler_skin")
+   
+    menu_additem(menu, g_ActiveSkin[id][weapon_id] == 0 ? "\yAlap Skin \r[Aktiv]" : "\wAlap Skin \y[Felszerel]", "0")
+   
+    for(new s = 1; s <= MAX_SKINS; s++) {
+        new bit = (1 << (s - 1))
+        new szItem[128], szNum[3]
+        num_to_str(s, szNum, 2)
+        
+        if(g_UnlockedSkins[id][weapon_id] & bit) {
+            if(g_ActiveSkin[id][weapon_id] == s) {
+                formatex(szItem, charsmax(szItem), "\y%s \r[Aktiv]", g_SkinNames[s-1])
+            } else {
+                formatex(szItem, charsmax(szItem), "\w%s \y[Felszerel]", g_SkinNames[s-1])
+            }
+        } else {
+            formatex(szItem, charsmax(szItem), "\d%s \r[%d pont]", g_SkinNames[s-1], g_SkinCosts[s-1])
+        }
+        menu_additem(menu, szItem, szNum)
+    }
+    menu_display(id, menu, 0)
+}
+ 
+public handler_skin(id, menu, item) {
+    if(item == MENU_EXIT) {
+        menu_destroy(menu)
+        return PLUGIN_HANDLED
+    }
+    new info[4], dummy
+    menu_item_getinfo(menu, item, dummy, info, charsmax(info), _, _, dummy)
+    new s = str_to_num(info)
+    new weapon_id = g_MenuTarget[id]
+   
+    if(s == 0) {
+        g_ActiveSkin[id][weapon_id] = 0
+        client_print(id, print_chat, "[Fegyver Skin] Alap skin felszerelve!")
+    } else {
+        new bit = (1 << (s - 1))
+        if(g_UnlockedSkins[id][weapon_id] & bit) {
+            g_ActiveSkin[id][weapon_id] = s
+            client_print(id, print_chat, "[Fegyver Skin] %s felszerelve!", g_SkinNames[s-1])
+        } else {
+            new cost = g_SkinCosts[s-1]
+            if(g_Coins[id] >= cost) {
+                g_Coins[id] -= cost
+                g_UnlockedSkins[id][weapon_id] |= bit
+                g_ActiveSkin[id][weapon_id] = s
+                client_print(id, print_chat, "[Fegyver Skin] Megvasaroltad: %s!", g_SkinNames[s-1])
+            } else {
+                client_print(id, print_chat, "[Fegyver Skin] Nincs eleg pontod! Hianyzik: %d", cost - g_Coins[id])
+            }
+        }
+    }
+    show_skin_menu(id, weapon_id)
+    menu_destroy(menu)
+    return PLUGIN_HANDLED
+}
+ 
+public event_sebzes(id) {
+    new aldozat_id = id
+    if(!is_user_connected(aldozat_id) || !is_user_alive(aldozat_id)) return PLUGIN_CONTINUE
+    
+    new dmg_adas = read_data(2)
+    new dmgtype = read_data(3)
+    new FegyID, sebzo_id = get_user_attacker(aldozat_id, FegyID)
+    if(!is_user_connected(sebzo_id) || aldozat_id == sebzo_id) return PLUGIN_HANDLED
+   
+    new w = get_weapon_index(FegyID)
+    if(w == 11 && g_ActiveSkin[sebzo_id][w] == 3) {
+        new Float:sebzes = dmg_adas * get_pcvar_float(SEBZES)
+        new elet = get_user_health(aldozat_id)
+        if(floatround(sebzes) >= elet) {
+            log_kill(sebzo_id, aldozat_id, "ak47", 0)
+        } else {
+            fakedamage(aldozat_id, "weapon_ak47", sebzes, dmgtype)
+        }
+    }
+    return PLUGIN_CONTINUE
+}
+ 
+stock log_kill(gyilkos, aldozat, fegyver[], fejloves) {
+    user_silentkill(aldozat)
+    message_begin(MSG_ALL, get_user_msgid("DeathMsg"), {0,0,0}, 0)
+    write_byte(gyilkos)
+    write_byte(aldozat)
+    write_byte(fejloves)
+    write_string(fegyver)
+    message_end()
+    new oles = get_user_frags(gyilkos)
+    set_user_frags(gyilkos, oles + 1)
+    new elvetel = get_user_frags(aldozat)
+    set_user_frags(aldozat, elvetel + 1)
+} 
+ 
+public pontmegtekint(id) { 
+    client_print(id, print_chat, "[Fegyver Skin] Jelenleg %d olespontod van boltba kolteni.", g_Coins[id]) 
+}
+
+public KorUzenet() { 
+    client_print(0, print_chat, "[Fegyver Skin] Ird be /skin hogy megnyisd a Bolt menut.")
+} 
+ 
+public mentes(id) {
+    new vaultkey[64], vaultdata[512], authid[32]
+    get_user_authid(id, authid, 31)
+    formatex(vaultkey, charsmax(vaultkey), "%s-SKIN-V3", authid)
+   
+    new len = formatex(vaultdata, charsmax(vaultdata), "%d ", g_Coins[id])
+    for(new w = 0; w < MAX_WEAPONS; w++) {
+        len += formatex(vaultdata[len], charsmax(vaultdata)-len, "%d ", g_ActiveSkin[id][w])
+    }
+    for(new w = 0; w < MAX_WEAPONS; w++) {
+        len += formatex(vaultdata[len], charsmax(vaultdata)-len, "%d ", g_UnlockedSkins[id][w])
+    }
+    nvault_set(vault, vaultkey, vaultdata)
+}
+ 
+public betoltes(id) {
+    new vaultkey[64], vaultdata[512], authid[32], arg[16]
+    get_user_authid(id, authid, 31)
+    formatex(vaultkey, charsmax(vaultkey), "%s-SKIN-V3", authid)
+   
+    if(nvault_get(vault, vaultkey, vaultdata, charsmax(vaultdata))) {
+        strbreak(vaultdata, arg, charsmax(arg), vaultdata, charsmax(vaultdata))
+        g_Coins[id] = str_to_num(arg)
+        
+        for(new w = 0; w < MAX_WEAPONS; w++) {
+            strbreak(vaultdata, arg, charsmax(arg), vaultdata, charsmax(vaultdata))
+            g_ActiveSkin[id][w] = str_to_num(arg)
+        }
+        
+        for(new w = 0; w < MAX_WEAPONS; w++) {
+            strbreak(vaultdata, arg, charsmax(arg), vaultdata, charsmax(vaultdata))
+            g_UnlockedSkins[id][w] = str_to_num(arg)
+        }
+    } else {
+        g_Coins[id] = 0
+        for(new w = 0; w < MAX_WEAPONS; w++) {
+            g_ActiveSkin[id][w] = 0
+            g_UnlockedSkins[id][w] = 0
+        }
+    }
+}
+ 
+public client_disconnect(id) { 
+    mentes(id)
+}
+
+public client_connect(id) { 
+    set_task(1.0, "betoltes", id)
+}
+ 
+get_weapon_index(csw_id) {
+    for(new i = 0; i < MAX_WEAPONS; i++) {
+        if(g_WeaponCSW[i] == csw_id) {
+            return i
+        }
+    }
+    return -1
+}

@@ -1,0 +1,31 @@
+L 11/06/2026 - 10:08:29: Start of error session.
+L 11/06/2026 - 10:08:29: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 10:08:29: [AMXX] Plugin file open error (plugin "colored_smoke.amxx")
+L 11/06/2026 - 11:38:52: Start of error session.
+L 11/06/2026 - 11:38:52: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 11:38:52: [AMXX] Plugin file open error (plugin "manga_adminmodels.amxx")
+L 11/06/2026 - 11:39:23: Start of error session.
+L 11/06/2026 - 11:39:23: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 11:39:23: [AMXX] Plugin file open error (plugin "manga_adminmodels.amxx")
+L 11/06/2026 - 12:17:12: Start of error session.
+L 11/06/2026 - 12:17:12: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 12:17:12: [AMXX] Plugin file open error (plugin "manga_adminmodels.amxx")
+L 11/06/2026 - 12:19:03: Start of error session.
+L 11/06/2026 - 12:19:03: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 12:19:03: [AMXX] Plugin file open error (plugin "manga_adminmodels.amxx")
+L 11/06/2026 - 13:30:44: Start of error session.
+L 11/06/2026 - 13:30:44: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 13:30:44: Function "logevent_round_start" was not found
+L 11/06/2026 - 13:30:44: [AMXX] Run time error 19 (plugin "c4.amxx") - debug not enabled!
+L 11/06/2026 - 13:30:44: [AMXX] To enable debug mode, add "debug" after the plugin name in plugins.ini (without quotes).
+L 11/06/2026 - 13:31:24: Start of error session.
+L 11/06/2026 - 13:31:24: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 13:31:24: Function "logevent_round_start" was not found
+L 11/06/2026 - 13:31:24: [AMXX] Run time error 19 (plugin "bomb.amxx") - debug not enabled!
+L 11/06/2026 - 13:31:24: [AMXX] To enable debug mode, add "debug" after the plugin name in plugins.ini (without quotes).
+L 11/06/2026 - 13:31:41: Start of error session.
+L 11/06/2026 - 13:31:41: Info (map "de_dust2") (file "addons/amxmodx/logs/error_20261106.log")
+L 11/06/2026 - 13:31:41: Function "logevent_round_start" was not found
+L 11/06/2026 - 13:31:41: [AMXX] Displaying debug trace (plugin "bomb.amxx")
+L 11/06/2026 - 13:31:41: [AMXX] Run time error 19: function not found 
+L 11/06/2026 - 13:31:41: [AMXX]    [0] c4.sma::plugin_init (line 17)
